@@ -21,6 +21,7 @@ configurations {
 
 repositories {
 	mavenCentral()
+	maven(url="https://jitpack.io")
 }
 
 dependencies {
@@ -33,6 +34,7 @@ dependencies {
 	testImplementation("org.springframework.boot:spring-boot-starter-test")
 	testRuntimeOnly("org.junit.platform:junit-platform-launcher")
 	implementation("org.jsoup:jsoup:1.20.1")
+	implementation("com.github.mpkorstanje:simmetrics-core:4.1.1")
 }
 
 tasks.withType<Test> {

@@ -22,13 +22,13 @@ public class TaskObserverService {
     public void startObserving() {
         System.out.println("🔁 Loading tasks from " + FILE_NAME);
 
-        Task oneTask = new Task("https://x.com/cbseindia29", "When CBSE announces class X result", false);
-        Task secondTask = new Task("https://vedpanse.com", "When he posts a blog", true);
-        Task thirdTask = new Task("https://x.com/cbseindia29", "When he posts a blog", false);
+        Task oneTask = new Task("https://results.cbse.nic.in/", "When CBSE announces class X result");
+        Task secondTask = new Task("https://vedpanse.com", "When he posts a blog");
+        Task thirdTask = new Task("https://x.com/cbseindia29", "When he posts a blog");
 
-//        oneTask.register();
-//        secondTask.register();
-//        thirdTask.register();
+        oneTask.register();
+        secondTask.register();
+        thirdTask.register();
 
         List<Task> loaded = loadTasksFromFile();
         taskList.addAll(loaded);

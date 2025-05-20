@@ -12,8 +12,8 @@ import org.jsoup.nodes.Document;
 
 import java.io.File;
 import java.io.IOException;
-import java.util.UUID;
-
+import java.util.*;
+import java.util.stream.Collectors;
 
 @Getter
 @Setter
@@ -26,27 +26,19 @@ public class Task {
     @JsonIgnore
     private final String TASK_LIST = "taskList";
 
-    // Getters and setters for target and query if needed
     private String target;
     private String query;
-    private boolean completed;
+    private boolean complete = false;
 
-    public Task() {
+    public Task() {}
 
-    }
-
-    public Task(String target, String query, boolean completed) {
+    public Task(String target, String query) {
         this.target = target;
         this.query = query;
-        this.completed = completed;
     }
 
-    public boolean isComplete() {
-        return completed;
-    }
-
-    public void setComplete(boolean completed) {
-        this.completed = completed;
+    public void setComplete(boolean complete) {
+        this.complete = complete;
 
         ObjectMapper mapper = new ObjectMapper();
         File file = new File(FILE_NAME);
@@ -61,7 +53,7 @@ public class Task {
                 JsonNode taskNode = taskList.get(i);
                 if (taskNode.has("id") && taskNode.get("id").asText().equals(this.id)) {
                     // Update "complete" field
-                    ((ObjectNode) taskNode).put("complete", completed);
+                    ((ObjectNode) taskNode).put("complete", complete);
                     break;
                 }
             }
@@ -72,27 +64,36 @@ public class Task {
         }
     }
 
-
-    /**
-     * Tracks whether query has been satisfied at the target url
-     */
     public boolean observe() {
-        String htmlContent = getHTMLContent();
-        System.out.println(htmlContent);
-        boolean verdict = true;
+        String html = getHTMLContent();
+        if (html.isEmpty()) return false;
 
-        setCompleted(verdict);
+        Set<String> queryWords = preprocess(query);
+        Set<String> pageWords = preprocess(html);
+
+        long matched = queryWords.stream().filter(pageWords::contains).count();
+        double ratio = (double) matched / queryWords.size();
+
+        System.out.printf("🔍 [%s] Matched %d of %d (%.2f)\n", query, matched, queryWords.size(), ratio);
+
+        boolean verdict = matched >= 3 || ratio >= 0.6;
+        setComplete(verdict);
         return verdict;
     }
 
-    /**
-     * Return the HTML content of an url
-     * @return HTML content
-     */
+    private Set<String> preprocess(String text) {
+        Set<String> stopwords = Set.of("the", "a", "an", "of", "on", "in", "to", "by", "for", "and", "is", "are", "was", "with", "this", "that", "when");
+
+        return Arrays.stream(text.toLowerCase().split("\\W+"))
+                .map(word -> word.replaceAll("(ing|ed|es|s)$", ""))
+                .filter(w -> w.length() > 2 && !stopwords.contains(w))
+                .collect(Collectors.toSet());
+    }
+
     private String getHTMLContent() {
         try {
             Document doc = Jsoup.connect(this.target).get();
-            return doc.text(); // only visible text, not HTML tags
+            return doc.text();
         } catch (IOException e) {
             System.err.println("Error fetching URL: " + target);
             e.printStackTrace();
@@ -100,49 +101,35 @@ public class Task {
         }
     }
 
-
-    /**
-     * Adds Task to the tasklist in the json file
-     */
-    public boolean register() {
+    public void register() {
         ObjectMapper mapper = new ObjectMapper();
         File file = new File(FILE_NAME);
 
         try {
             ObjectNode root;
 
-            // Load or create root object
             if (file.exists()) {
                 root = (ObjectNode) mapper.readTree(file);
             } else {
                 root = mapper.createObjectNode();
-                root.putArray("taskList");
+                root.putArray(TASK_LIST);
             }
 
-            // Get or create taskList array
             ArrayNode taskList = (ArrayNode) root.withArray(TASK_LIST);
 
-            // Construct task JSON manually with only the allowed fields
             ObjectNode taskJson = mapper.createObjectNode();
             taskJson.put("id", id);
             taskJson.put("target", target);
             taskJson.put("query", query);
-            taskJson.put("complete", completed);
+            taskJson.put("complete", complete);
 
-            // Append to list and write back
             taskList.add(taskJson);
             mapper.writerWithDefaultPrettyPrinter().writeValue(file, root);
-
-            return true;
         } catch (Exception e) {
             e.printStackTrace();
-            return false;
         }
     }
 
-    /**
-     * Removes Task from the tasklist in the json file
-     */
     public void removeTrace() {
         ObjectMapper mapper = new ObjectMapper();
         File file = new File(FILE_NAME);
@@ -151,13 +138,12 @@ public class Task {
             if (!file.exists()) return;
 
             ObjectNode root = (ObjectNode) mapper.readTree(file);
-            ArrayNode tasklist = (ArrayNode) root.withArray(TASK_LIST);
+            ArrayNode taskList = (ArrayNode) root.withArray(TASK_LIST);
 
-            for (int i = 0; i < tasklist.size(); i++) {
-                JsonNode taskNode = tasklist.get(i);
+            for (int i = 0; i < taskList.size(); i++) {
+                JsonNode taskNode = taskList.get(i);
                 if (taskNode.has("id") && taskNode.get("id").asText().equals(this.getId())) {
-                    // Replace old version with updated one
-                    tasklist.set(i, this.toJson());
+                    taskList.remove(i);
                     break;
                 }
             }
@@ -168,13 +154,13 @@ public class Task {
         }
     }
 
-
-    /**
-     * Returns the task in the form of a JSON object
-     */
     public JsonNode toJson() {
         ObjectMapper mapper = new ObjectMapper();
-        return mapper.valueToTree(this);
+        ObjectNode node = mapper.createObjectNode();
+        node.put("id", id);
+        node.put("target", target);
+        node.put("query", query);
+        node.put("complete", complete);
+        return node;
     }
-
 }
