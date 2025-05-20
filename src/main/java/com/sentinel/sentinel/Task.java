@@ -50,7 +50,18 @@ public class Task {
      * Tracks whether query has been satisfied at the target url
      */
     public boolean observe() {
+        String htmlContent = getHTMLContent();
+
         return false;
+    }
+
+    /**
+     * Return the HTML content of a url
+     * @return HTML content
+     */
+    private String getHTMLContent() {
+        // throw some kind of error if the website is not scrapable
+        return "";
     }
 
     /**
