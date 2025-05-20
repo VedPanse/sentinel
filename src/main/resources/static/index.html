@@ -2,13 +2,54 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>Sentinel</title>
-    <link rel="stylesheet" href="/style.css">
+    <title>Sentinel Tasks</title>
+    <style>
+        body {
+            font-family: sans-serif;
+            background-color: #1e1e1e;
+            color: white;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+        }
+        th, td {
+            border: 1px solid #444;
+            padding: 8px;
+        }
+        th {
+            background-color: #333;
+        }
+    </style>
 </head>
 <body>
-<h1>✅ Sentinel is Up!</h1>
-<button onclick="showMessage()">Click me</button>
+<table id="task-table"></table>
 
-<script src="/script.js"></script>
+<script>
+    async function loadTasks() {
+        const res = await fetch('/api/tasks');
+        const data = await res.json();
+        const table = document.getElementById('task-table');
+
+        if (!data || data.length === 0) {
+            table.innerHTML = "<tr><td>No tasks found</td></tr>";
+            return;
+        }
+
+        // Create header
+        const headers = Object.keys(data[0]);
+        const thead = `<tr>${headers.map(h => `<th>${h}</th>`).join('')}</tr>`;
+
+        // Create rows
+        const rows = data.map(task =>
+            `<tr>${headers.map(h => `<td>${task[h]}</td>`).join('')}</tr>`
+        ).join('');
+
+        table.innerHTML = thead + rows;
+    }
+
+    loadTasks();
+</script>
 </body>
 </html>
