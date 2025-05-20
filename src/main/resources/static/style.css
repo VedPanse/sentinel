@@ -64,3 +64,9 @@ button:hover {
     color: #4bcb02;
     background-color: #4bcb021a;
 }
+
+a {
+    color: black !important;
+    text-decoration: underline;
+    text-underline-position: under;
+}

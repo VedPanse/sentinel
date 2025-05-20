@@ -1,50 +1,72 @@
 package com.sentinel.sentinel.service;
 
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.sentinel.sentinel.Task;
 import jakarta.annotation.PostConstruct;
 import org.springframework.stereotype.Component;
 
-import java.util.ArrayList;
-import java.util.Iterator;
+import java.io.File;
 import java.util.List;
+import java.util.concurrent.*;
 
 @Component
 public class TaskObserverService {
 
-    private final List<Task> taskList = new ArrayList<>();
-    private static final int SAMPLE_RATE = 65536;
+    private final List<Task> taskList = new CopyOnWriteArrayList<>();
+    private final ScheduledExecutorService scheduler = Executors.newScheduledThreadPool(4);
+    private static final int CHECK_INTERVAL_SECONDS = 30; // For testing. Change to MINUTES in prod
+    private static final String FILE_NAME = ".task_log.json";
 
     @PostConstruct
     public void startObserving() {
-        Thread observerThread = new Thread(() -> {
-            while (true) {
-                System.out.println("Observer thread running");
-                System.out.println("taskList: " + taskList.toString());
+        System.out.println("🔁 Loading tasks from " + FILE_NAME);
 
-                if (taskList.isEmpty()) break;
+        Task oneTask = new Task("https://x.com/cbseindia29", "When CBSE announces class X result", false);
+        Task secondTask = new Task("https://vedpanse.com", "When he posts a blog", true);
+        Task thirdTask = new Task("https://x.com/cbseindia29", "When he posts a blog", false);
 
-                Iterator<Task> iterator = taskList.iterator();
-                while (iterator.hasNext()) {
-                    Task task = iterator.next();
-                    if (task.observe()) {
-                        task.setComplete(true);
-                        iterator.remove();
-                        task.removeTrace();
-                    }
-                }
+//        oneTask.register();
+//        secondTask.register();
+//        thirdTask.register();
 
-                try {
-                    Thread.sleep(1000 / SAMPLE_RATE);
-                } catch (InterruptedException e) {
-                    Thread.currentThread().interrupt();
-                    break;
-                }
+        List<Task> loaded = loadTasksFromFile();
+        taskList.addAll(loaded);
+
+        for (Task task : loaded) {
+            scheduleTask(task);
+            System.out.println("📌 Scheduled task: " + task.getQuery());
+        }
+    }
+
+    private void scheduleTask(Task task) {
+        Runnable check = () -> {
+            System.out.println("🕵 Checking task: " + task.getId());
+
+            if (task.observe()) {
+                System.out.println("✔ Task complete: " + task.getQuery());
+                task.setComplete(true);
+                taskList.remove(task);
             }
+        };
 
-            System.out.println("Observer thread stopped");
-        });
+        scheduler.scheduleAtFixedRate(check, 0, CHECK_INTERVAL_SECONDS, TimeUnit.SECONDS);
+    }
 
-        observerThread.setDaemon(true);
-        observerThread.start();
+    private List<Task> loadTasksFromFile() {
+        try {
+            ObjectMapper mapper = new ObjectMapper();
+            File file = new File(FILE_NAME);
+            if (!file.exists()) return List.of();
+
+            JsonNode root = mapper.readTree(file);
+            JsonNode array = root.get("taskList");
+            if (array == null || !array.isArray()) return List.of();
+
+            return mapper.readerForListOf(Task.class).readValue(array);
+        } catch (Exception e) {
+            e.printStackTrace();
+            return List.of();
+        }
     }
 }

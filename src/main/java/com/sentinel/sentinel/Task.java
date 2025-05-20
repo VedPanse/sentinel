@@ -1,58 +1,88 @@
 package com.sentinel.sentinel;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.fasterxml.jackson.databind.node.ArrayNode;
-
+import lombok.Getter;
+import lombok.Setter;
+import org.jsoup.Jsoup;
+import org.jsoup.nodes.Document;
 
 import java.io.File;
+import java.io.IOException;
 import java.util.UUID;
 
+
+@Getter
+@Setter
 public class Task {
-    private final String id;
+    private final String id = UUID.randomUUID().toString();
+
+    @JsonIgnore
     private final String FILE_NAME = ".task_log.json";
+
+    @JsonIgnore
     private final String TASK_LIST = "taskList";
 
+    // Getters and setters for target and query if needed
     private String target;
     private String query;
     private boolean completed;
+
+    public Task() {
+
+    }
 
     public Task(String target, String query, boolean completed) {
         this.target = target;
         this.query = query;
         this.completed = completed;
-        this.id = UUID.randomUUID().toString();
     }
 
     public boolean isComplete() {
         return completed;
     }
 
-    public String getId() {
-        return id;
-    }
-
     public void setComplete(boolean completed) {
         this.completed = completed;
+
+        ObjectMapper mapper = new ObjectMapper();
+        File file = new File(FILE_NAME);
+
+        try {
+            if (!file.exists()) return;
+
+            ObjectNode root = (ObjectNode) mapper.readTree(file);
+            ArrayNode taskList = (ArrayNode) root.withArray(TASK_LIST);
+
+            for (int i = 0; i < taskList.size(); i++) {
+                JsonNode taskNode = taskList.get(i);
+                if (taskNode.has("id") && taskNode.get("id").asText().equals(this.id)) {
+                    // Update "complete" field
+                    ((ObjectNode) taskNode).put("complete", completed);
+                    break;
+                }
+            }
+
+            mapper.writerWithDefaultPrettyPrinter().writeValue(file, root);
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
     }
 
-    // Getters and setters for target and query if needed
-    public String getTarget() {
-        return target;
-    }
-
-    public String getQuery() {
-        return query;
-    }
 
     /**
      * Tracks whether query has been satisfied at the target url
      */
     public boolean observe() {
         String htmlContent = getHTMLContent();
+        System.out.println(htmlContent);
+        boolean verdict = true;
 
-        return false;
+        setCompleted(verdict);
+        return verdict;
     }
 
     /**
@@ -60,9 +90,16 @@ public class Task {
      * @return HTML content
      */
     private String getHTMLContent() {
-        // throw some kind of error if the website is not scrapable
-        return "";
+        try {
+            Document doc = Jsoup.connect(this.target).get();
+            return doc.text(); // only visible text, not HTML tags
+        } catch (IOException e) {
+            System.err.println("Error fetching URL: " + target);
+            e.printStackTrace();
+            return "";
+        }
     }
+
 
     /**
      * Adds Task to the tasklist in the json file
@@ -74,22 +111,26 @@ public class Task {
         try {
             ObjectNode root;
 
-            // If file exists, load it
+            // Load or create root object
             if (file.exists()) {
                 root = (ObjectNode) mapper.readTree(file);
             } else {
-                // If not, create a new JSON object with an empty taskList
                 root = mapper.createObjectNode();
                 root.putArray("taskList");
             }
 
-            // Get the tasklist array reference
+            // Get or create taskList array
             ArrayNode taskList = (ArrayNode) root.withArray(TASK_LIST);
 
-            // Add current task as JSON
-            taskList.add(this.toJson());
+            // Construct task JSON manually with only the allowed fields
+            ObjectNode taskJson = mapper.createObjectNode();
+            taskJson.put("id", id);
+            taskJson.put("target", target);
+            taskJson.put("query", query);
+            taskJson.put("complete", completed);
 
-            // Write updated JSON back to file
+            // Append to list and write back
+            taskList.add(taskJson);
             mapper.writerWithDefaultPrettyPrinter().writeValue(file, root);
 
             return true;
@@ -102,37 +143,31 @@ public class Task {
     /**
      * Removes Task from the tasklist in the json file
      */
-    public boolean removeTrace() {
+    public void removeTrace() {
         ObjectMapper mapper = new ObjectMapper();
         File file = new File(FILE_NAME);
 
         try {
-            // If file does not exist, nothing to remove
-            if (!file.exists()) {
-                return false;
-            }
+            if (!file.exists()) return;
 
-            // Load JSON root
             ObjectNode root = (ObjectNode) mapper.readTree(file);
             ArrayNode tasklist = (ArrayNode) root.withArray(TASK_LIST);
 
-            // Iterate and remove matching task by UUID
             for (int i = 0; i < tasklist.size(); i++) {
                 JsonNode taskNode = tasklist.get(i);
                 if (taskNode.has("id") && taskNode.get("id").asText().equals(this.getId())) {
-                    tasklist.remove(i);
+                    // Replace old version with updated one
+                    tasklist.set(i, this.toJson());
                     break;
                 }
             }
 
-            // Writing the updated JSON back to file
             mapper.writerWithDefaultPrettyPrinter().writeValue(file, root);
-            return true;
         } catch (Exception e) {
             e.printStackTrace();
-            return false;
         }
     }
+
 
     /**
      * Returns the task in the form of a JSON object

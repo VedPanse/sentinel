@@ -25,7 +25,7 @@
         }
 
         // Create header
-        const headers = Object.keys(data[0]);
+        const headers = ["id", "target", "query", "complete"];
         const thead = `<tr>${headers.map(h => `<th>${toTitleCase(h)}</th>`).join('')}</tr>`;
 
         // Helper to extract domain name
@@ -47,15 +47,15 @@
                     const label = extractDomainName(href);
                     return `<td><a href="${href}" target="_blank">${label}</a></td>`;
                 } else if (h === "complete") {
-                    const isComplete = task[h];
-                    const text = isComplete ? "Complete" : "Incomplete";
-                    const cssClass = isComplete ? "complete" : "incomplete";
+                    const text = task[h] ? "Complete" : "Incomplete";
+                    const cssClass = task[h] ? "complete" : "incomplete";
                     return `<td class="${cssClass}">${text}</td>`;
                 } else {
                     return `<td>${task[h]}</td>`;
                 }
             }).join('')}</tr>`
         ).join('');
+
 
         function toTitleCase(str) {
             return str
