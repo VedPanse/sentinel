@@ -3,25 +3,12 @@
 <head>
     <meta charset="UTF-8">
     <title>Sentinel Tasks</title>
-    <style>
-        body {
-            font-family: sans-serif;
-            background-color: #1e1e1e;
-            color: white;
-        }
-        table {
-            width: 100%;
-            border-collapse: collapse;
-            margin-top: 20px;
-        }
-        th, td {
-            border: 1px solid #444;
-            padding: 8px;
-        }
-        th {
-            background-color: #333;
-        }
-    </style>
+
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:ital,wght@0,100..900;1,100..900&display=swap" rel="stylesheet">
+
+    <link rel="stylesheet" href="style.css">
 </head>
 <body>
 <table id="task-table"></table>
@@ -39,12 +26,45 @@
 
         // Create header
         const headers = Object.keys(data[0]);
-        const thead = `<tr>${headers.map(h => `<th>${h}</th>`).join('')}</tr>`;
+        const thead = `<tr>${headers.map(h => `<th>${toTitleCase(h)}</th>`).join('')}</tr>`;
+
+        // Helper to extract domain name
+        function extractDomainName(url) {
+            try {
+                const domain = new URL(url).hostname;
+                if (domain.includes("x.com")) return "X";
+                return domain.replace("www.", "").split(".")[0];
+            } catch (e) {
+                return url;
+            }
+        }
 
         // Create rows
         const rows = data.map(task =>
-            `<tr>${headers.map(h => `<td>${task[h]}</td>`).join('')}</tr>`
+            `<tr>${headers.map(h => {
+                if (h === "target") {
+                    const href = task[h];
+                    const label = extractDomainName(href);
+                    return `<td><a href="${href}" target="_blank">${label}</a></td>`;
+                } else if (h === "complete") {
+                    const isComplete = task[h];
+                    const text = isComplete ? "Complete" : "Incomplete";
+                    const cssClass = isComplete ? "complete" : "incomplete";
+                    return `<td class="${cssClass}">${text}</td>`;
+                } else {
+                    return `<td>${task[h]}</td>`;
+                }
+            }).join('')}</tr>`
         ).join('');
+
+        function toTitleCase(str) {
+            return str
+                .toLowerCase()
+                .split(" ")
+                .map(word => word.charAt(0).toUpperCase() + word.slice(1))
+                .join(" ");
+        }
+
 
         table.innerHTML = thead + rows;
     }

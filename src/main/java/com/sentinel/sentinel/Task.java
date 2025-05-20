@@ -8,6 +8,7 @@ import com.fasterxml.jackson.databind.node.ArrayNode;
 
 import java.io.File;
 import java.util.UUID;
+
 public class Task {
     private final String id;
     private final String FILE_NAME = ".task_log.json";
@@ -17,22 +18,22 @@ public class Task {
     private String query;
     private boolean completed;
 
-    public Task(String target, String query, boolean completed){
+    public Task(String target, String query, boolean completed) {
         this.target = target;
         this.query = query;
         this.completed = completed;
         this.id = UUID.randomUUID().toString();
     }
 
-    public boolean isComplete(){
+    public boolean isComplete() {
         return completed;
     }
 
-    public String getId(){
+    public String getId() {
         return id;
     }
 
-    public void setComplete(boolean completed){
+    public void setComplete(boolean completed) {
         this.completed = completed;
     }
 
@@ -48,14 +49,14 @@ public class Task {
     /**
      * Tracks whether query has been satisfied at the target url
      */
-    public boolean observe(){
+    public boolean observe() {
         return false;
     }
 
     /**
      * Adds Task to the tasklist in the json file
      */
-    public boolean register(){
+    public boolean register() {
         ObjectMapper mapper = new ObjectMapper();
         File file = new File(FILE_NAME);
 
@@ -65,8 +66,7 @@ public class Task {
             // If file exists, load it
             if (file.exists()) {
                 root = (ObjectNode) mapper.readTree(file);
-            }
-            else{
+            } else {
                 // If not, create a new JSON object with an empty taskList
                 root = mapper.createObjectNode();
                 root.putArray("taskList");
@@ -83,7 +83,7 @@ public class Task {
 
             return true;
         } catch (Exception e) {
-            e.printStackTrace();;
+            e.printStackTrace();
             return false;
         }
     }
@@ -91,13 +91,13 @@ public class Task {
     /**
      * Removes Task from the tasklist in the json file
      */
-    public boolean removeTrace(){
+    public boolean removeTrace() {
         ObjectMapper mapper = new ObjectMapper();
         File file = new File(FILE_NAME);
 
-        try{
+        try {
             // If file does not exist, nothing to remove
-            if(!file.exists()){
+            if (!file.exists()) {
                 return false;
             }
 
@@ -106,7 +106,7 @@ public class Task {
             ArrayNode tasklist = (ArrayNode) root.withArray(TASK_LIST);
 
             // Iterate and remove matching task by UUID
-            for(int i =0; i < tasklist.size();i++){
+            for (int i = 0; i < tasklist.size(); i++) {
                 JsonNode taskNode = tasklist.get(i);
                 if (taskNode.has("id") && taskNode.get("id").asText().equals(this.getId())) {
                     tasklist.remove(i);
@@ -117,16 +117,16 @@ public class Task {
             // Writing the updated JSON back to file
             mapper.writerWithDefaultPrettyPrinter().writeValue(file, root);
             return true;
-        }
-        catch (Exception e){
+        } catch (Exception e) {
             e.printStackTrace();
             return false;
         }
     }
+
     /**
      * Returns the task in the form of a JSON object
      */
-    public JsonNode toJson(){
+    public JsonNode toJson() {
         ObjectMapper mapper = new ObjectMapper();
         return mapper.valueToTree(this);
     }

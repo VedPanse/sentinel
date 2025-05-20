@@ -17,15 +17,6 @@ public class TaskObserverService {
     @PostConstruct
     public void startObserving() {
         Thread observerThread = new Thread(() -> {
-            Task sampleTask = new Task("https://x.com/cbseindia29", "When CBSE posts about grade 10 result announcement", false);
-            Task secondTask = new Task("https://kotlinconf.com/contest/", "When Kotlin Multiplatform Contest results are announced, notify me", true);
-            Task thirdTask = new Task("https://vedpanse.com", "When he uploads a blog about Pandas, send a message to slack saying \"it's done.\"", false);
-
-            sampleTask.register();
-            thirdTask.register();
-
-            secondTask.removeTrace();
-
             while (true) {
                 System.out.println("Observer thread running");
                 System.out.println("taskList: " + taskList.toString());
