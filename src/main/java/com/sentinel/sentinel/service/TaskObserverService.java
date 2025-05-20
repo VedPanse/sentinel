@@ -22,8 +22,9 @@ public class TaskObserverService {
             Task thirdTask = new Task("https://vedpanse.com", "When he uploads a blog about Pandas, send a message to slack saying \"it's done.\"", false);
 
             sampleTask.register();
-            secondTask.register();
             thirdTask.register();
+
+            secondTask.removeTrace();
 
             while (true) {
                 System.out.println("Observer thread running");

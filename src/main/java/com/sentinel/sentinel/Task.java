@@ -9,8 +9,10 @@ import com.fasterxml.jackson.databind.node.ArrayNode;
 import java.io.File;
 import java.util.UUID;
 public class Task {
-    private final String uuid;
+    private final String id;
     private final String FILE_NAME = ".task_log.json";
+    private final String TASK_LIST = "taskList";
+
     private String target;
     private String query;
     private boolean completed;
@@ -19,7 +21,7 @@ public class Task {
         this.target = target;
         this.query = query;
         this.completed = completed;
-        this.uuid = UUID.randomUUID().toString();
+        this.id = UUID.randomUUID().toString();
     }
 
     public boolean isComplete(){
@@ -27,7 +29,7 @@ public class Task {
     }
 
     public String getId(){
-        return uuid;
+        return id;
     }
 
     public void setComplete(boolean completed){
@@ -67,11 +69,11 @@ public class Task {
             else{
                 // If not, create a new JSON object with an empty taskList
                 root = mapper.createObjectNode();
-                root.putArray("tasklist");
+                root.putArray("taskList");
             }
 
             // Get the tasklist array reference
-            ArrayNode taskList = (ArrayNode) root.withArray("taskList");
+            ArrayNode taskList = (ArrayNode) root.withArray(TASK_LIST);
 
             // Add current task as JSON
             taskList.add(this.toJson());
@@ -101,12 +103,12 @@ public class Task {
 
             // Load JSON root
             ObjectNode root = (ObjectNode) mapper.readTree(file);
-            ArrayNode tasklist = (ArrayNode) root.withArray("tasklist");
+            ArrayNode tasklist = (ArrayNode) root.withArray(TASK_LIST);
 
             // Iterate and remove matching task by UUID
             for(int i =0; i < tasklist.size();i++){
                 JsonNode taskNode = tasklist.get(i);
-                if (taskNode.has("uuid") && taskNode.get("uuid").asText().equals(this.getId().toString())){
+                if (taskNode.has("id") && taskNode.get("id").asText().equals(this.getId())) {
                     tasklist.remove(i);
                     break;
                 }
