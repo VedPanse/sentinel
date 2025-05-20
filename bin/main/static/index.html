@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Sentinel Tasks</title>
+
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:ital,wght@0,100..900;1,100..900&display=swap" rel="stylesheet">
+
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+<table id="task-table"></table>
+
+<script>
+    async function loadTasks() {
+        const res = await fetch('/api/tasks');
+        const data = await res.json();
+        const table = document.getElementById('task-table');
+
+        if (!data || data.length === 0) {
+            table.innerHTML = "<tr><td>No tasks found</td></tr>";
+            return;
+        }
+
+        // Create header
+        const headers = ["id", "target", "query", "complete"];
+        const thead = `<tr>${headers.map(h => `<th>${toTitleCase(h)}</th>`).join('')}</tr>`;
+
+        // Helper to extract domain name
+        function extractDomainName(url) {
+            try {
+                const domain = new URL(url).hostname;
+                if (domain.includes("x.com")) return "X";
+                return domain.replace("www.", "").split(".")[0];
+            } catch (e) {
+                return url;
+            }
+        }
+
+        // Create rows
+        const rows = data.map(task =>
+            `<tr>${headers.map(h => {
+                if (h === "target") {
+                    const href = task[h];
+                    const label = extractDomainName(href);
+                    return `<td><a href="${href}" target="_blank">${label}</a></td>`;
+                } else if (h === "complete") {
+                    const text = task[h] ? "Complete" : "Incomplete";
+                    const cssClass = task[h] ? "complete" : "incomplete";
+                    return `<td class="${cssClass}">${text}</td>`;
+                } else {
+                    return `<td>${task[h]}</td>`;
+                }
+            }).join('')}</tr>`
+        ).join('');
+
+
+        function toTitleCase(str) {
+            return str
+                .toLowerCase()
+                .split(" ")
+                .map(word => word.charAt(0).toUpperCase() + word.slice(1))
+                .join(" ");
+        }
+
+
+        table.innerHTML = thead + rows;
+    }
+
+    loadTasks();
+</script>
+</body>
+</html>
