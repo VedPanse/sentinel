@@ -56,7 +56,7 @@ public class Task {
     }
 
     /**
-     * Return the HTML content of a url
+     * Return the HTML content of an url
      * @return HTML content
      */
     private String getHTMLContent() {
