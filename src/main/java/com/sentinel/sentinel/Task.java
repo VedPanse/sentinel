@@ -10,12 +10,12 @@ import java.io.File;
 import java.util.UUID;
 public class Task {
     private final String uuid;
-    private final String FILE_NAME = "task_log.json";
+    private final String FILE_NAME = ".task_log.json";
     private String target;
     private String query;
     private boolean completed;
 
-    Task(String target, String query, boolean completed){
+    public Task(String target, String query, boolean completed){
         this.target = target;
         this.query = query;
         this.completed = completed;

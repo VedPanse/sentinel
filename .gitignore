@@ -9,6 +9,7 @@
 
 # Log file
 *.log
+.task_log.json
 
 # BlueJ files
 *.ctxt
@@ -55,5 +56,7 @@ gradle-app.setting
 ### Gradle Patch ###
 # Java heap dump
 *.hprof
+
+.task_log.json
 
 # End of https://www.toptal.com/developers/gitignore/api/java,gradle,idea
