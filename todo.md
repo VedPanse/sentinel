@@ -1,3 +1,4 @@
 - [ ] Enable it as background processes
 - [ ] Extend to SDK
 - [ ] When json file is deleted, handle error
+- [ ] Smart duplicate handling
