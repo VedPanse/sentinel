@@ -100,17 +100,6 @@ Returns:
 ```json
 { "matched": true }
 ```
-
----
-
-## ✅ TODO / Ideas
-
-* [ ] Live web UI to view/manage task statuses
-* [ ] Email or Telegram alerts on match
-* [ ] Redis or SQLite support for persistence
-* [ ] Smart duplicate handling
-* [ ] Query suggestion based on site analysis
-
 ---
 
 ## 📜 License
