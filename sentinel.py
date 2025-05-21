@@ -3,13 +3,39 @@ from bs4 import BeautifulSoup
 from sentence_transformers import SentenceTransformer, util
 import requests
 import logging
+import json
+import os
 
 app = Flask(__name__)
 model = None
-model_ready = False  # <- Track readiness
+model_ready = False
 
-# Set up logging
-logging.basicConfig(level=logging.INFO)
+TASK_LOG_FILE = ".task_log.json"
+
+
+# Helper to mark a task complete in the JSON file
+def mark_task_complete_by_id(task_id):
+    try:
+        if not os.path.exists(TASK_LOG_FILE):
+            logging.warning("⚠️ Task log file not found.")
+            return
+
+        with open(TASK_LOG_FILE, "r", encoding="utf-8") as f:
+            data = json.load(f)
+
+        changed = False
+        for task in data.get("taskList", []):
+            if task.get("id") == task_id and not task.get("complete", False):
+                task["complete"] = True
+                changed = True
+
+        if changed:
+            with open(TASK_LOG_FILE, "w", encoding="utf-8") as f:
+                json.dump(data, f, indent=2)
+            logging.info(f"💾 Marked task {task_id} as complete in {TASK_LOG_FILE}")
+    except Exception as e:
+        logging.exception("❌ Failed to update task log file")
+
 
 @app.route("/match", methods=["POST"])
 def match():
@@ -23,6 +49,8 @@ def match():
     data = request.get_json()
     url = data.get("url")
     query = data.get("query")
+    task_id = data.get("id")  # New
+
     logging.info(f"📦 Body: {data}")
 
     if not url or not query:
@@ -40,8 +68,12 @@ def match():
         similarity = util.pytorch_cos_sim(query_embedding, page_embedding).item()
         logging.info(f"🧠 Similarity score: {similarity:.4f}")
 
-        match_result = similarity > 0.3  # You can tune this threshold
+        match_result = similarity > 0.3
         logging.info(f"{'✅ Match found' if match_result else '❌ No match'} for URL: {url}")
+
+        if match_result and task_id:
+            mark_task_complete_by_id(task_id)
+
         return jsonify({"matched": match_result})
 
     except Exception as e:
