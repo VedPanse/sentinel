@@ -1,6 +1,8 @@
 # Sentinel
 
-![[logo.png]]
+<p align="center">
+  <img src="logo.png" alt="Sentinel Logo" width="200"/>
+</p>
 
 **Sentinel** is an intelligent task observer that continuously monitors web pages for meaningful content changes using AI-powered semantic matching. It automatically marks tasks as complete when the content you're looking for appears — even if phrased differently.
 
