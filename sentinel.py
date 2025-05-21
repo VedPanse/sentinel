@@ -11,6 +11,7 @@ model = None
 model_ready = False
 
 TASK_LOG_FILE = ".task_log.json"
+SIMILARITY_THRESHOLD = 0.65
 
 
 # Helper to mark a task complete in the JSON file
@@ -68,7 +69,7 @@ def match():
         similarity = util.pytorch_cos_sim(query_embedding, page_embedding).item()
         logging.info(f"🧠 Similarity score: {similarity:.4f}")
 
-        match_result = similarity > 0.3
+        match_result = similarity > SIMILARITY_THRESHOLD
         logging.info(f"{'✅ Match found' if match_result else '❌ No match'} for URL: {url}")
 
         if match_result and task_id:

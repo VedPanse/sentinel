@@ -70,15 +70,12 @@ public class TaskObserverService {
     }
 
     private void register() {
-        Task one = new Task("https://results.cbse.nic.in/", "When CBSE announces class X result");
-        Task two = new Task("https://vedpanse.com", "When he posts a blog");
-        Task three = new Task("https://x.com/cbseindia29", "When he posts a blog");
-        Task four = new Task("https://www.apple.com/newsroom/2025/05/apples-worldwide-developers-conference-kicks-off-june-9/", "When apple announces Worldwide Developer's Conference dates, send a message to my mom.");
-        Task five = new Task("https://www.apple.com/newsroom/2025/05/apples-worldwide-developers-conference-kicks-off-june-9/", "When Microsoft announces shutdown, send a message on Slack");
+        Task one = new Task("https://vedpanse.com/templates/peanuts.html", "When Ved posts that he likes peanuts, send me an email.");
+        Task two = new Task("https://vedpanse.com/templates/peanuts.html", "When Ved posts that he hates peanuts, alert me");
 
-        taskList.addAll(List.of(one, two, three, four, five));
+        taskList.addAll(List.of(one, two));
         taskList.forEach(Task::register);
-        System.out.println("✅ Registered 3 demo tasks");
+        System.out.println("✅ Registered demo tasks");
     }
 
     private void scheduleTask(Task task) {
