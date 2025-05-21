@@ -58,5 +58,6 @@ gradle-app.setting
 *.hprof
 
 .task_log.json
+.venv
 
 # End of https://www.toptal.com/developers/gitignore/api/java,gradle,idea

@@ -64,12 +64,6 @@ public class Task {
         }
     }
 
-    public boolean observe() {
-        // TODO call the python function from here?
-        return true;
-    }
-
-
     public void register() {
         ObjectMapper mapper = new ObjectMapper();
         File file = new File(FILE_NAME);
