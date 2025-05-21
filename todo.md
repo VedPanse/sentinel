@@ -1,6 +1,5 @@
-- [ ] Enable it as background processes
-- [ ] Extend to SDK
-- [ ] When json file is deleted, handle error
-- [ ] Smart duplicate handling
 - [ ] Make AI smarter?
   - [ ] probably run more tests
+- [ ] Enable it as background processes
+- [ ] Extend to SDK
+- [ ] Smart duplicate handling
