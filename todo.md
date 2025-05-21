@@ -1,5 +1,3 @@
-- [ ] Have NLP created in sentinel.py
-- [ ] Run python file through Java server
-- [ ] Improve the mutation observer (while loop)
 - [ ] Enable it as background processes
 - [ ] Extend to SDK
+- [ ] When json file is deleted, handle error
