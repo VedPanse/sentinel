@@ -65,41 +65,10 @@ public class Task {
     }
 
     public boolean observe() {
-        String html = getHTMLContent();
-        if (html.isEmpty()) return false;
-
-        Set<String> queryWords = preprocess(query);
-        Set<String> pageWords = preprocess(html);
-
-        long matched = queryWords.stream().filter(pageWords::contains).count();
-        double ratio = (double) matched / queryWords.size();
-
-        System.out.printf("🔍 [%s] Matched %d of %d (%.2f)\n", query, matched, queryWords.size(), ratio);
-
-        boolean verdict = matched >= 3 || ratio >= 0.6;
-        setComplete(verdict);
-        return verdict;
+        // TODO call the python function from here?
+        return true;
     }
 
-    private Set<String> preprocess(String text) {
-        Set<String> stopwords = Set.of("the", "a", "an", "of", "on", "in", "to", "by", "for", "and", "is", "are", "was", "with", "this", "that", "when");
-
-        return Arrays.stream(text.toLowerCase().split("\\W+"))
-                .map(word -> word.replaceAll("(ing|ed|es|s)$", ""))
-                .filter(w -> w.length() > 2 && !stopwords.contains(w))
-                .collect(Collectors.toSet());
-    }
-
-    private String getHTMLContent() {
-        try {
-            Document doc = Jsoup.connect(this.target).get();
-            return doc.text();
-        } catch (IOException e) {
-            System.err.println("Error fetching URL: " + target);
-            e.printStackTrace();
-            return "";
-        }
-    }
 
     public void register() {
         ObjectMapper mapper = new ObjectMapper();
