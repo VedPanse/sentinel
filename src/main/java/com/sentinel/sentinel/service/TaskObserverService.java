@@ -17,6 +17,9 @@ import java.util.concurrent.*;
 @Component
 public class TaskObserverService {
 
+    private final PythonProcessManager matcher = new PythonProcessManager();
+    private int matcherPort;
+
     private final List<Task> taskList = new CopyOnWriteArrayList<>();
     private final ScheduledExecutorService scheduler = Executors.newScheduledThreadPool(4);
     private static final int CHECK_INTERVAL_SECONDS = 30; // For testing. Change to MINUTES in prod
@@ -24,15 +27,18 @@ public class TaskObserverService {
 
     @PostConstruct
     public void startObserving() {
+        try {
+            matcherPort = matcher.findAvailablePort(); // dynamically find free port
+            matcher.startPythonServer(matcherPort);
+
+            // ⏳ Wait until Flask server is healthy
+            waitForPythonHealth(matcherPort);
+            System.out.println("✅ Python matcher is healthy");
+        } catch (IOException | InterruptedException e) {
+            throw new RuntimeException("❌ Could not start or connect to Python matcher", e);
+        }
+
         System.out.println("🔁 Loading tasks from " + FILE_NAME);
-
-        Task oneTask = new Task("https://results.cbse.nic.in/", "When CBSE announces class X result");
-        Task secondTask = new Task("https://vedpanse.com", "When he posts a blog");
-        Task thirdTask = new Task("https://x.com/cbseindia29", "When he posts a blog");
-
-//        oneTask.register();
-//        secondTask.register();
-//        thirdTask.register();
 
         List<Task> loaded = loadTasksFromFile();
         taskList.addAll(loaded);
@@ -42,6 +48,28 @@ public class TaskObserverService {
             System.out.println("📌 Scheduled task: " + task.getQuery());
         }
     }
+
+    private void waitForPythonHealth(int port) throws IOException, InterruptedException {
+        int retries = 20;
+        int delayMs = 500;
+
+        while (retries-- > 0) {
+            try {
+                URL healthURL = new URL("http://localhost:" + port + "/health");
+                HttpURLConnection conn = (HttpURLConnection) healthURL.openConnection();
+                conn.setRequestMethod("GET");
+                conn.setConnectTimeout(1000);
+                conn.setReadTimeout(1000);
+                int responseCode = conn.getResponseCode();
+
+                if (responseCode == 200) return; // ready
+            } catch (IOException ignored) {
+            }
+            Thread.sleep(delayMs);
+        }
+        throw new IOException("Timed out waiting for Python matcher to become healthy on port " + port);
+    }
+
 
     private void scheduleTask(Task task) {
         Runnable check = () -> {
@@ -64,13 +92,12 @@ public class TaskObserverService {
     }
 
     private boolean sendToPythonMatcher(String url, String query) throws IOException {
-        URL endpoint = new URL("http://localhost:5001/match");
+        URL endpoint = new URL("http://localhost:" + matcherPort + "/match");
         HttpURLConnection conn = (HttpURLConnection) endpoint.openConnection();
         conn.setRequestMethod("POST");
         conn.setRequestProperty("Content-Type", "application/json");
         conn.setDoOutput(true);
 
-        // Use ObjectMapper to safely encode the JSON payload
         ObjectMapper mapper = new ObjectMapper();
         String jsonPayload = mapper.writeValueAsString(Map.of("url", url, "query", query));
 
@@ -93,11 +120,6 @@ public class TaskObserverService {
             }
             return response.toString().contains("true");
         }
-    }
-
-
-    private String escapeJson(String value) {
-        return value.replace("\\", "\\\\").replace("\"", "\\\"");
     }
 
     private List<Task> loadTasksFromFile() {

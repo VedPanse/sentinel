@@ -5,13 +5,17 @@ import requests
 import logging
 
 app = Flask(__name__)
-model = SentenceTransformer("all-MiniLM-L6-v2")  # Small, fast, effective
+model = None
+model_ready = False  # <- Track readiness
 
 # Set up logging
 logging.basicConfig(level=logging.INFO)
 
 @app.route("/match", methods=["POST"])
 def match():
+    if not model_ready:
+        return jsonify({"error": "Model not ready"}), 503
+
     logging.info("📥 Incoming request to /match")
     headers = dict(request.headers)
     logging.info(f"🔍 Headers: {headers}")
@@ -44,6 +48,25 @@ def match():
         logging.exception("🔥 Error processing request")
         return jsonify({"error": str(e)}), 500
 
+
+@app.route("/health", methods=["GET"])
+def health():
+    return jsonify({"ready": model_ready}), 200 if model_ready else 503
+
+
 if __name__ == "__main__":
-    logging.info("🚀 Starting Sentinel Matcher Service on http://localhost:5000")
-    app.run(host="0.0.0.0", port=5001)
+    logging.info("🚀 Loading model...")
+    try:
+        model = SentenceTransformer("all-MiniLM-L6-v2")
+        model_ready = True
+        logging.info("✅ Model ready.")
+    except Exception as e:
+        logging.exception("❌ Failed to load model")
+        exit(1)
+
+    import argparse
+    parser = argparse.ArgumentParser()
+    parser.add_argument('--port', type=int, default=5001)
+    args = parser.parse_args()
+
+    app.run(host="0.0.0.0", port=args.port)
