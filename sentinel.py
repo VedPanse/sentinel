@@ -5,24 +5,47 @@ import requests
 import logging
 import json
 import os
+import re
+import traceback
 
+# 🧠 Load entailment model (zero-shot with RoBERTa)
+def load_model():
+    return pipeline("zero-shot-classification", model="roberta-large-mnli", device=-1)
+
+nli = load_model()
 app = Flask(__name__)
-nli = None
-model_ready = False
-
+model_ready = True
 TASK_LOG_FILE = ".task_log.json"
 
-def load_model():
-    global nli, model_ready
-    logging.info("🚀 Loading entailment model...")
-    try:
-        nli = pipeline("text-classification", model="facebook/bart-large-mnli")
-        model_ready = True
-        logging.info("✅ Model ready.")
-    except Exception as e:
-        logging.exception("❌ Failed to load model")
-        model_ready = False
+# 🔎 Regex sentence tokenizer
+def sent_tokenize(text):
+    return re.split(r'(?<=[.!?])\s+(?=[A-Z])', text.strip())
 
+# ✅ Match query on page
+def page_entails(url: str, query: str) -> bool:
+    try:
+        response = requests.get(url, timeout=8)
+        soup = BeautifulSoup(response.text, "html.parser")
+        page_text = soup.get_text(separator=" ", strip=True)[:5000]
+
+        for sentence in sent_tokenize(page_text):
+            result = nli(sentence, candidate_labels=[query], hypothesis_template="This text implies that {}")
+            label = result["labels"][0]
+            score = result["scores"][0]
+            logging.info(f"🔍 \"{sentence}\" → {label} (score: {score:.2f})")
+
+            if label == query and score > 0.7:
+                logging.info(f"✅ Match: \"{sentence}\"")
+                return True
+
+        logging.info("❌ No entailment found.")
+        return False
+
+    except Exception as e:
+        logging.exception("🔥 Error during entailment check")
+        return False
+
+# ✅ Mark task complete
 def mark_task_complete_by_id(task_id):
     try:
         if not os.path.exists(TASK_LOG_FILE):
@@ -45,15 +68,7 @@ def mark_task_complete_by_id(task_id):
     except Exception as e:
         logging.exception("❌ Failed to update task log file")
 
-def is_entailment(premise, hypothesis):
-    try:
-        result = nli(f"{premise} </s></s> {hypothesis}", truncation=True)[0]
-        logging.info(f"📊 Entailment Result: {result}")
-        return result["label"] == "ENTAILMENT"
-    except Exception as e:
-        logging.exception("❌ Error during entailment check")
-        return False
-
+# 📡 POST /match
 @app.route("/match", methods=["POST"])
 def match():
     if not model_ready:
@@ -66,37 +81,28 @@ def match():
     task_id = data.get("id")
 
     logging.info(f"📦 Body: {data}")
-
     if not url or not query:
-        logging.warning("❌ Missing URL or query.")
         return jsonify({"error": "Missing URL or query"}), 400
 
     try:
-        response = requests.get(url, timeout=8)
-        soup = BeautifulSoup(response.text, "html.parser")
-        page_text = soup.get_text(separator=' ', strip=True)
-
-        entails = is_entailment(page_text, query)
-        logging.info(f"{'✅ Entailment confirmed' if entails else '❌ No entailment'} for query: {query}")
-
+        entails = page_entails(url, query)
         if entails and task_id:
             mark_task_complete_by_id(task_id)
-
         return jsonify({"matched": entails})
     except Exception as e:
         logging.exception("🔥 Error processing request")
         return jsonify({"error": str(e)}), 500
 
+# ⚕️ GET /health
 @app.route("/health", methods=["GET"])
 def health():
     return jsonify({"ready": model_ready}), 200 if model_ready else 503
 
+# 🚀 Main
 if __name__ == "__main__":
     logging.basicConfig(level=logging.INFO)
     import argparse
     parser = argparse.ArgumentParser()
     parser.add_argument('--port', type=int, default=5001)
     args = parser.parse_args()
-
-    load_model()
     app.run(host="0.0.0.0", port=args.port)

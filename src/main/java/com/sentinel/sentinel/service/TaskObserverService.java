@@ -70,8 +70,8 @@ public class TaskObserverService {
     }
 
     private void register() {
-        Task one = new Task("https://vedpanse.com/templates/peanuts.html", "When Ved posts that he likes peanuts, send me an email.");
-        Task two = new Task("https://vedpanse.com/templates/peanuts.html", "When Ved posts that he hates peanuts, alert me");
+        Task one = new Task("https://www.google.com/search?q=csk+rcb&oq=csk+rcb&gs_lcrp=EgZjaHJvbWUyBggAEEUYOTIGCAEQLhhA0gEIMTg1M2owajGoAgCwAgA&sourceid=chrome&ie=UTF-8#sie=m;/g/11x2qrx24q;5;/m/03b_lm1;dt;fp;1;;;", "Google is redirecting");
+        Task two = new Task("https://www.google.com/search?q=csk+rcb&oq=csk+rcb&gs_lcrp=EgZjaHJvbWUyBggAEEUYOTIGCAEQLhhA0gEIMTg1M2owajGoAgCwAgA&sourceid=chrome&ie=UTF-8#sie=m;/g/11x2qrx24q;5;/m/03b_lm1;dt;fp;1;;;", "Google is redirecting");
 
         taskList.addAll(List.of(one, two));
         taskList.forEach(Task::register);
