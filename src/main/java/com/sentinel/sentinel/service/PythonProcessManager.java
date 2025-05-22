@@ -8,6 +8,8 @@ public class PythonProcessManager {
 
     public void startPythonServer(int port) throws IOException {
         String pythonScript = "sentinel.py";
+
+        // TODO make the following line cross-compatible with every operating system
         ProcessBuilder pb = new ProcessBuilder(
                 "bash", "-c", "source .venv/bin/activate && python " + pythonScript + " --port=" + port
         );
