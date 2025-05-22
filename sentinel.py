@@ -1,20 +1,28 @@
 from flask import Flask, request, jsonify
 from bs4 import BeautifulSoup
-from sentence_transformers import SentenceTransformer, util
+from transformers import pipeline
 import requests
 import logging
 import json
 import os
 
 app = Flask(__name__)
-model = None
+nli = None
 model_ready = False
 
 TASK_LOG_FILE = ".task_log.json"
-SIMILARITY_THRESHOLD = 0.65
 
+def load_model():
+    global nli, model_ready
+    logging.info("🚀 Loading entailment model...")
+    try:
+        nli = pipeline("text-classification", model="facebook/bart-large-mnli")
+        model_ready = True
+        logging.info("✅ Model ready.")
+    except Exception as e:
+        logging.exception("❌ Failed to load model")
+        model_ready = False
 
-# Helper to mark a task complete in the JSON file
 def mark_task_complete_by_id(task_id):
     try:
         if not os.path.exists(TASK_LOG_FILE):
@@ -37,6 +45,14 @@ def mark_task_complete_by_id(task_id):
     except Exception as e:
         logging.exception("❌ Failed to update task log file")
 
+def is_entailment(premise, hypothesis):
+    try:
+        result = nli(f"{premise} </s></s> {hypothesis}", truncation=True)[0]
+        logging.info(f"📊 Entailment Result: {result}")
+        return result["label"] == "ENTAILMENT"
+    except Exception as e:
+        logging.exception("❌ Error during entailment check")
+        return False
 
 @app.route("/match", methods=["POST"])
 def match():
@@ -44,13 +60,10 @@ def match():
         return jsonify({"error": "Model not ready"}), 503
 
     logging.info("📥 Incoming request to /match")
-    headers = dict(request.headers)
-    logging.info(f"🔍 Headers: {headers}")
-
     data = request.get_json()
     url = data.get("url")
     query = data.get("query")
-    task_id = data.get("id")  # New
+    task_id = data.get("id")
 
     logging.info(f"📦 Body: {data}")
 
@@ -63,43 +76,27 @@ def match():
         soup = BeautifulSoup(response.text, "html.parser")
         page_text = soup.get_text(separator=' ', strip=True)
 
-        query_embedding = model.encode(query, convert_to_tensor=True)
-        page_embedding = model.encode(page_text, convert_to_tensor=True)
+        entails = is_entailment(page_text, query)
+        logging.info(f"{'✅ Entailment confirmed' if entails else '❌ No entailment'} for query: {query}")
 
-        similarity = util.pytorch_cos_sim(query_embedding, page_embedding).item()
-        logging.info(f"🧠 Similarity score: {similarity:.4f}")
-
-        match_result = similarity > SIMILARITY_THRESHOLD
-        logging.info(f"{'✅ Match found' if match_result else '❌ No match'} for URL: {url}")
-
-        if match_result and task_id:
+        if entails and task_id:
             mark_task_complete_by_id(task_id)
 
-        return jsonify({"matched": match_result})
-
+        return jsonify({"matched": entails})
     except Exception as e:
         logging.exception("🔥 Error processing request")
         return jsonify({"error": str(e)}), 500
-
 
 @app.route("/health", methods=["GET"])
 def health():
     return jsonify({"ready": model_ready}), 200 if model_ready else 503
 
-
 if __name__ == "__main__":
-    logging.info("🚀 Loading model...")
-    try:
-        model = SentenceTransformer("all-MiniLM-L6-v2")
-        model_ready = True
-        logging.info("✅ Model ready.")
-    except Exception as e:
-        logging.exception("❌ Failed to load model")
-        exit(1)
-
+    logging.basicConfig(level=logging.INFO)
     import argparse
     parser = argparse.ArgumentParser()
     parser.add_argument('--port', type=int, default=5001)
     args = parser.parse_args()
 
+    load_model()
     app.run(host="0.0.0.0", port=args.port)

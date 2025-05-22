@@ -2,4 +2,3 @@
   - [ ] probably run more tests
 - [ ] Enable it as background processes
 - [ ] Extend to SDK
-- [ ] Smart duplicate handling
