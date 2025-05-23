@@ -70,10 +70,11 @@ public class TaskObserverService {
     }
 
     private void register() {
-        Task one = new Task("https://www.google.com/search?q=csk+rcb&oq=csk+rcb&gs_lcrp=EgZjaHJvbWUyBggAEEUYOTIGCAEQLhhA0gEIMTg1M2owajGoAgCwAgA&sourceid=chrome&ie=UTF-8#sie=m;/g/11x2qrx24q;5;/m/03b_lm1;dt;fp;1;;;", "Google is redirecting");
-        Task two = new Task("https://www.google.com/search?q=csk+rcb&oq=csk+rcb&gs_lcrp=EgZjaHJvbWUyBggAEEUYOTIGCAEQLhhA0gEIMTg1M2owajGoAgCwAgA&sourceid=chrome&ie=UTF-8#sie=m;/g/11x2qrx24q;5;/m/03b_lm1;dt;fp;1;;;", "Google is redirecting");
-
-        taskList.addAll(List.of(one, two));
+        Task one = new Task("https://vedpanse.com/templates/peanuts.html", "CSK scored less than 200 runs");
+        Task two = new Task("https://en.wikipedia.org/wiki/Ezra_Pound", "Erza pound wrote a 800-page poem");
+        Task three = new Task("https://vedpanse.com/templates/peanuts.html", "CSK scored more than 200 runs");
+        
+        taskList.addAll(List.of(one, two, three));
         taskList.forEach(Task::register);
         System.out.println("✅ Registered demo tasks");
     }

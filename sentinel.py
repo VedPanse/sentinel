@@ -7,6 +7,7 @@ import json
 import os
 import re
 import traceback
+from typing import Optional
 
 # 🧠 Load entailment model (zero-shot with RoBERTa)
 def load_model():
@@ -21,6 +22,15 @@ TASK_LOG_FILE = ".task_log.json"
 def sent_tokenize(text):
     return re.split(r'(?<=[.!?])\s+(?=[A-Z])', text.strip())
 
+# 🔍 Detect numeric condition in query
+def parse_numeric_condition(query: str) -> Optional[tuple[str, float]]:
+    query = query.lower()
+    if match := re.search(r"(?:above|over|more than|greater than)\s*\$?(\d+(?:,\d{3})*(?:\.\d+)?)", query):
+        return (">", float(match.group(1).replace(",", "")))
+    if match := re.search(r"(?:below|under|less than|fewer than)\s*\$?(\d+(?:,\d{3})*(?:\.\d+)?)", query):
+        return ("<", float(match.group(1).replace(",", "")))
+    return None
+
 # ✅ Match query on page
 def page_entails(url: str, query: str) -> bool:
     try:
@@ -28,17 +38,30 @@ def page_entails(url: str, query: str) -> bool:
         soup = BeautifulSoup(response.text, "html.parser")
         page_text = soup.get_text(separator=" ", strip=True)[:5000]
 
+        logging.info(f"🔢 Full HTML content (trimmed):\n{page_text[:1000]}")
+
+        condition = parse_numeric_condition(query)
+
         for sentence in sent_tokenize(page_text):
-            result = nli(sentence, candidate_labels=[query], hypothesis_template="This text implies that {}")
-            label = result["labels"][0]
-            score = result["scores"][0]
-            logging.info(f"🔍 \"{sentence}\" → {label} (score: {score:.2f})")
+            if condition:
+                operator, threshold = condition
+                if num_match := re.search(r"(\d+(?:,\d{3})*(?:\.\d+)?)", sentence):
+                    value = float(num_match.group(1).replace(",", ""))
+                    logging.info(f"🔢 Checking numeric in sentence: '{sentence}'")
+                    if (operator == ">" and value > threshold) or (operator == "<" and value < threshold):
+                        logging.info(f"📊 Numeric match: {value} {operator} {threshold}")
+                        return True
+            else:
+                result = nli(sentence, candidate_labels=[query], hypothesis_template="This text implies that {}")
+                label = result["labels"][0]
+                score = result["scores"][0]
+                logging.info(f"🔍 \"{sentence}\" → {label} (score: {score:.2f})")
 
-            if label == query and score > 0.7:
-                logging.info(f"✅ Match: \"{sentence}\"")
-                return True
+                if label == query and score > 0.7:
+                    logging.info(f"✅ Match: \"{sentence}\"")
+                    return True
 
-        logging.info("❌ No entailment found.")
+        logging.info("❌ No entailment or numeric match found.")
         return False
 
     except Exception as e:
@@ -64,7 +87,7 @@ def mark_task_complete_by_id(task_id):
         if changed:
             with open(TASK_LOG_FILE, "w", encoding="utf-8") as f:
                 json.dump(data, f, indent=2)
-            logging.info(f"💾 Marked task {task_id} as complete in {TASK_LOG_FILE}")
+            logging.info(f"📂 Marked task {task_id} as complete in {TASK_LOG_FILE}")
     except Exception as e:
         logging.exception("❌ Failed to update task log file")
 
@@ -80,7 +103,7 @@ def match():
     query = data.get("query")
     task_id = data.get("id")
 
-    logging.info(f"📦 Body: {data}")
+    logging.info(f"🛆 Body: {data}")
     if not url or not query:
         return jsonify({"error": "Missing URL or query"}), 400
 
