@@ -1,4 +1,3 @@
-- [ ] Make AI smarter?
-  - [ ] probably run more tests
+- [ ] Figure out packaging .venv too
 - [ ] Enable it as background processes
 - [ ] Extend to SDK

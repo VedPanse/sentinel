@@ -9,8 +9,10 @@ version = "0.0.1-SNAPSHOT"
 
 java {
 	toolchain {
-		languageVersion = JavaLanguageVersion.of(17)
+		languageVersion.set(JavaLanguageVersion.of(17))
 	}
+	withJavadocJar()
+	withSourcesJar()
 }
 
 configurations {
@@ -21,20 +23,32 @@ configurations {
 
 repositories {
 	mavenCentral()
-	maven(url="https://jitpack.io")
+	maven(url = "https://jitpack.io")
 }
 
 dependencies {
 	implementation("org.springframework.boot:spring-boot-starter-actuator")
 	implementation("org.springframework.boot:spring-boot-starter-data-jpa")
 	implementation("org.springframework.boot:spring-boot-starter-web")
-	compileOnly("org.projectlombok:lombok")
-	developmentOnly("org.springframework.boot:spring-boot-devtools")
-	annotationProcessor("org.projectlombok:lombok")
-	testImplementation("org.springframework.boot:spring-boot-starter-test")
-	testRuntimeOnly("org.junit.platform:junit-platform-launcher")
 	implementation("org.jsoup:jsoup:1.20.1")
 	implementation("com.github.mpkorstanje:simmetrics-core:4.1.1")
+
+	compileOnly("org.projectlombok:lombok")
+	annotationProcessor("org.projectlombok:lombok")
+
+	developmentOnly("org.springframework.boot:spring-boot-devtools")
+
+	testImplementation("org.springframework.boot:spring-boot-starter-test")
+	testRuntimeOnly("org.junit.platform:junit-platform-launcher")
+}
+
+// ✅ Enable plain JAR export (SDK-style) instead of a Spring Boot fat JAR
+tasks.named<Jar>("jar") {
+	enabled = true
+}
+
+tasks.named<org.springframework.boot.gradle.tasks.bundling.BootJar>("bootJar") {
+	enabled = false
 }
 
 tasks.withType<Test> {

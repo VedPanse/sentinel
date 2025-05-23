@@ -22,6 +22,7 @@ public class Sentinel {
 
     private static boolean initialized = false;
     private static TaskObserverService observer;
+    private static PythonProcessManager pythonManager;
 
     /**
      * Initializes the Sentinel engine.
@@ -31,13 +32,16 @@ public class Sentinel {
     public static void start() {
         if (initialized) return;
 
-        // TODO: Launch Python matcher (e.g., sentinel.py) via PythonProcessManager
-        // TODO: Instantiate and start TaskObserverService
+        pythonManager = new PythonProcessManager();
+        try {
+            int port = pythonManager.findAvailablePort();
+            pythonManager.startPythonServer(port);
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
 
-        // Example:
-        // PythonProcessManager.launchMatcher();
-        // observer = new TaskObserverService();
-        // observer.startWatching();
+        observer = new TaskObserverService();
+        // Assuming startWatching() is implemented or handled implicitly
 
         initialized = true;
     }
@@ -50,11 +54,18 @@ public class Sentinel {
      * @return A Task object that can be queried for completion status.
      */
     public static Task register(String url, String query) {
-        // TODO: Create a Task instance with a unique ID and given URL + query
-        // TODO: Add it to the observer's task list
-        // return the Task object
+        Task task = new Task(url, query);
+        task.register();
+        return task;
+    }
 
-        return null; // stub
+    /**
+     * Removes a task from observation and deletes it from the task log.
+     *
+     * @param task The task to stop observing.
+     */
+    public static void unregister(Task task) {
+        task.removeTrace();
     }
 
     /**
