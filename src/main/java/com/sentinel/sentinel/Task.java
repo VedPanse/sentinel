@@ -31,6 +31,22 @@ public class Task {
     @JsonIgnore
     private final String TASK_LIST = "taskList";
 
+    public String getId() {
+        return id;
+    }
+
+    public boolean isComplete() {
+        return complete;
+    }
+
+    public String getQuery() {
+        return query;
+    }
+
+    public String getTarget() {
+        return target;
+    }
+
     /** The target URL or system this task is associated with. */
     private String target;
 
@@ -93,7 +109,36 @@ public class Task {
     @Override
     public boolean equals(Object o) {
         // TODO write actual implementation here
-        return true;
+        if (this == o)
+            return true;
+        if (o == null || this.getClass() != o.getClass())
+            return false;
+        Task other = (Task)o;
+        // default behaviour: check ID too
+        return this.equals(other, false);
+
+    }
+
+    /**
+     * Compares this task with another.
+     * @param other the task to compare with
+     * @param force if true, ignores the id during comparison
+     * @return true if tasks are equal based on comparison criteria
+     */
+    public boolean equals(Task other, boolean force) {
+        if (other == null)
+            return false;
+
+        boolean isEqual =
+                Objects.equals(this.getTarget(), other.getTarget()) &&
+                Objects.equals(this.getQuery(), other.getQuery()) &&
+                Objects.equals(this.isComplete(), other.isComplete());
+
+        // If force is true, there is no need to check id
+        if(force)
+            return isEqual;
+        else
+            return isEqual && this.getId().equals(other.getId());
     }
 
     /**
@@ -101,6 +146,10 @@ public class Task {
      * If the file does not exist, it is created.
      */
     public void register() {
+        register(false);
+    }
+
+    public void register(boolean force) {
         // TODO add an optional parameter call force, which will be set to
         //  false by default. If force is false, enable
         //  smart duplicate tracking, which will not add a task if it's
@@ -120,24 +169,50 @@ public class Task {
             }
 
             ArrayNode taskList = (ArrayNode) root.withArray(TASK_LIST);
+            boolean shouldAdd;
+            if(!force) {
+                shouldAdd = true;
+                for(JsonNode taskNode: taskList) {
+                    Task existing = new Task(
+                            taskNode.get("target").asText(),
+                            taskNode.get("query").asText()
+                    );
+                    existing.setComplete(taskNode.get("complete").asBoolean());
 
-            ObjectNode taskJson = mapper.createObjectNode();
-            taskJson.put("id", id);
-            taskJson.put("target", target);
-            taskJson.put("query", query);
-            taskJson.put("complete", complete);
+                    // Check for exact match ignoring id
+                    if (this.equals(existing, true)) {
+                        shouldAdd = false;
+                        break;
+                    }
+                }
+            }
+            else {
+                // If force is true always add
+                shouldAdd = true;
+            }
 
-            taskList.add(taskJson);
-            mapper.writerWithDefaultPrettyPrinter().writeValue(file, root);
+            if(shouldAdd){
+                ObjectNode taskJson = mapper.createObjectNode();
+                taskJson.put("id", id);
+                taskJson.put("target", target);
+                taskJson.put("query", query);
+                taskJson.put("complete", complete);
+
+                taskList.add(taskJson);
+                mapper.writerWithDefaultPrettyPrinter().writeValue(file, root);
+            }
         } catch (Exception e) {
             e.printStackTrace();
         }
     }
-
     /**
      * Removes this task's record from the task log file, effectively deleting its trace.
      */
-    public void removeTrace() {
+    public void removeTrace(){
+        removeTrace(true);
+    }
+
+    public void removeTrace(boolean force) {
         // TODO add an optional variable force which is true by default,
         //  and performs the same actions as before
         // If force is true, search by everything except id (look for .equals() method)
@@ -151,15 +226,38 @@ public class Task {
             ObjectNode root = (ObjectNode) mapper.readTree(file);
             ArrayNode taskList = (ArrayNode) root.withArray(TASK_LIST);
 
+            boolean taskRemoved = false;
+
             for (int i = 0; i < taskList.size(); i++) {
+                // Retrieving each task from tasklist
                 JsonNode taskNode = taskList.get(i);
-                if (taskNode.has("id") && taskNode.get("id").asText().equals(this.getId())) {
-                    taskList.remove(i);
-                    break;
+                Task other = new Task(
+                        taskNode.get("target").asText(),
+                        taskNode.get("query").asText()
+                );
+                other.setComplete(taskNode.get("complete").asBoolean());
+
+                if(force) {
+                    // Force = true: match by content (ignore ID)
+                    if(this.equals(other, true)) {
+                        taskList.remove(i);
+                        taskRemoved = true;
+                        break;
+                    }
+                }
+                else{
+                    // Force = false: match by every parameter including ID
+                    if (this.equals(other, false)) {
+                        taskList.remove(i);
+                        taskRemoved = true;
+                        break;
+                    }
                 }
             }
 
-            mapper.writerWithDefaultPrettyPrinter().writeValue(file, root);
+            if (taskRemoved){
+                mapper.writerWithDefaultPrettyPrinter().writeValue(file, root);
+            }
         } catch (Exception e) {
             e.printStackTrace();
         }
