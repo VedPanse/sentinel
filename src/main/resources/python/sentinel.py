@@ -16,7 +16,7 @@ def load_model():
 nli = load_model()
 app = Flask(__name__)
 model_ready = True
-TASK_LOG_FILE = ".task_log.json"
+TASK_LOG_FILE = "../../../../.task_log.json"
 
 # 🔎 Regex sentence tokenizer
 def sent_tokenize(text):

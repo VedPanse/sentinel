@@ -3,6 +3,8 @@ package com.sentinel.sentinel;
 import com.sentinel.sentinel.service.PythonProcessManager;
 import com.sentinel.sentinel.service.TaskObserverService;
 
+import java.io.File;
+
 /**
  * Sentinel SDK entrypoint.
  *
@@ -41,8 +43,6 @@ public class Sentinel {
         }
 
         observer = new TaskObserverService();
-        // Assuming startWatching() is implemented or handled implicitly
-
         initialized = true;
     }
 

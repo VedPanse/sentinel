@@ -1,39 +1,45 @@
 package com.sentinel.sentinel.service;
 
-import java.io.File;
-import java.io.IOException;
+import java.io.*;
 import java.net.ServerSocket;
+import java.nio.file.Files;
 import java.util.Arrays;
 import java.util.List;
 
 public class PythonProcessManager {
     private Process pythonProcess;
+    private String pythonPath = ".venv/bin/python"; // fallback
+
+    public void setPythonPath(String path) {
+        this.pythonPath = path;
+    }
 
     public void startPythonServer(int port) throws IOException {
-        String pythonScript = "sentinel.py";
+        // Resolve base directory from user.dir (project root when running from IDE)
+        File projectRoot = new File(System.getProperty("user.dir"));
 
-        // TODO make the following line cross-compatible with every operating system
-        // Determining os
         String os = System.getProperty("os.name").toLowerCase();
-        // Choose appropriate python executable path from virtual environment
         String pythonExecutable;
+
         if (os.contains("win")) {
-            pythonExecutable = ".venv\\Scripts\\python.exe";
-        }
-        else{
-            pythonExecutable = ".venv/bin/python";
+            pythonExecutable = new File(projectRoot, ".venv\\Scripts\\python.exe").getAbsolutePath();
+        } else {
+            pythonExecutable = new File(projectRoot, ".venv/bin/python").getAbsolutePath();
         }
 
-        // Construct command
-        List<String> command = Arrays.asList(pythonExecutable, pythonScript, "--port=" + port);
+        // Extract sentinel.py from resources to a temp file
+        File tempScript = extractPythonScript("python/sentinel.py");
+        if (tempScript == null || !tempScript.exists()) {
+            throw new FileNotFoundException("❌ Could not extract sentinel.py from resources.");
+        }
 
-        // Activates and launches python script
+        List<String> command = Arrays.asList(pythonExecutable, tempScript.getAbsolutePath(), "--port=" + port);
+
         ProcessBuilder pb = new ProcessBuilder(command);
-        pb.inheritIO(); // so logs show in Java console
-        pb.directory(new File(".")); // Ensure relative paths resolve correctly
+        pb.inheritIO(); // Show Python output in Java console
+        pb.directory(projectRoot); // run from project root
         pythonProcess = pb.start();
 
-        // Gracefully close the python process before the java application shuts down
         Runtime.getRuntime().addShutdownHook(new Thread(() -> {
             if (pythonProcess != null && pythonProcess.isAlive()) {
                 System.out.println("🛑 Stopping Python matcher");
@@ -41,7 +47,34 @@ public class PythonProcessManager {
             }
         }));
 
-        System.out.println("🐍 Started Python matcher: " + pythonScript);
+        System.out.println("🐍 Started Python matcher on port " + port);
+    }
+
+    /**
+     * Extracts the given resource to a temp file on disk.
+     *
+     * @param resourcePath e.g. "python/sentinel.py"
+     * @return File object pointing to the extracted temp file
+     * @throws IOException if resource not found or temp creation fails
+     */
+    private File extractPythonScript(String resourcePath) throws IOException {
+        InputStream stream = getClass().getClassLoader().getResourceAsStream(resourcePath);
+        if (stream == null) return null;
+
+        File temp = Files.createTempFile("sentinel", ".py").toFile();
+        temp.deleteOnExit();
+
+        try (BufferedReader reader = new BufferedReader(new InputStreamReader(stream));
+             BufferedWriter writer = new BufferedWriter(new FileWriter(temp))) {
+
+            String line;
+            while ((line = reader.readLine()) != null) {
+                writer.write(line);
+                writer.newLine();
+            }
+        }
+
+        return temp;
     }
 
     public int findAvailablePort() throws IOException {
